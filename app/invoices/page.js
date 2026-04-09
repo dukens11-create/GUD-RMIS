@@ -9,6 +9,7 @@ import { getInvoices, createInvoice, updateInvoice, deleteInvoice } from '@/lib/
 import { getLoads } from '@/lib/firestore';
 import { INVOICE_STATUS } from '@/lib/constants';
 import { titleCase, statusBadgeClass, formatCurrency, formatDate } from '@/lib/utils';
+import { exportToCsv } from '@/lib/exportCsv';
 
 const EMPTY_FORM = {
   loadId: '',
@@ -22,17 +23,26 @@ export default function InvoicesPage() {
   const [invoices, setInvoices] = useState([]);
   const [loads, setLoads] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
   const [editId, setEditId] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [formError, setFormError] = useState('');
 
   async function load() {
     setLoading(true);
-    const [invoiceData, loadData] = await Promise.all([getInvoices(), getLoads()]);
-    setInvoices(invoiceData);
-    setLoads(loadData);
-    setLoading(false);
+    setError('');
+    try {
+      const [invoiceData, loadData] = await Promise.all([getInvoices(), getLoads()]);
+      setInvoices(invoiceData);
+      setLoads(loadData);
+    } catch (err) {
+      setError('Failed to load invoices. Please try again.');
+      console.error('Invoices load error:', err.message);
+    } finally {
+      setLoading(false);
+    }
   }
 
   useEffect(() => { load(); }, []);
@@ -40,6 +50,7 @@ export default function InvoicesPage() {
   function openAdd() {
     setForm(EMPTY_FORM);
     setEditId(null);
+    setFormError('');
     setShowForm(true);
   }
 
@@ -52,12 +63,14 @@ export default function InvoicesPage() {
       notes: inv.notes ?? '',
     });
     setEditId(inv.id);
+    setFormError('');
     setShowForm(true);
   }
 
   async function handleSubmit(e) {
     e.preventDefault();
     setSaving(true);
+    setFormError('');
     try {
       const payload = { ...form, amount: parseFloat(form.amount) || 0 };
       if (editId) {
@@ -67,15 +80,23 @@ export default function InvoicesPage() {
       }
       setShowForm(false);
       await load();
+    } catch (err) {
+      setFormError('Failed to save invoice. Please try again.');
+      console.error('Invoice save error:', err.message);
     } finally {
       setSaving(false);
     }
   }
 
   async function handleDelete(id) {
-    if (!confirm('Delete this invoice?')) return;
-    await deleteInvoice(id);
-    await load();
+    if (!confirm('Delete this invoice? This action cannot be undone.')) return;
+    try {
+      await deleteInvoice(id);
+      await load();
+    } catch (err) {
+      setError('Failed to delete invoice. Please try again.');
+      console.error('Invoice delete error:', err.message);
+    }
   }
 
   const loadLabel = (id) => {
@@ -92,22 +113,47 @@ export default function InvoicesPage() {
             title="Invoices"
             subtitle="Manage billing and payment tracking"
             action={
-              <button
-                onClick={openAdd}
-                className="rounded-lg bg-blue-700 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-600"
-              >
-                + Add Invoice
-              </button>
+              <div className="flex gap-2">
+                {invoices.length > 0 && (
+                  <button
+                    onClick={() => exportToCsv(
+                      invoices,
+                      ['loadId', 'amount', 'dueDate', 'status', 'notes'],
+                      ['Load', 'Amount', 'Due Date', 'Status', 'Notes'],
+                      'invoices-export.csv'
+                    )}
+                    aria-label="Export invoices as CSV"
+                    className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+                  >
+                    Export CSV
+                  </button>
+                )}
+                <button
+                  onClick={openAdd}
+                  aria-label="Add a new invoice"
+                  className="rounded-lg bg-blue-700 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-600"
+                >
+                  + Add Invoice
+                </button>
+              </div>
             }
           />
 
+          {/* Global error banner */}
+          {error && (
+            <div role="alert" className="mb-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
+              {error}
+            </div>
+          )}
+
           {showForm && (
             <SectionCard title={editId ? 'Edit Invoice' : 'Add Invoice'} className="mb-6">
-              <form onSubmit={handleSubmit} className="grid gap-4 sm:grid-cols-2">
+              <form onSubmit={handleSubmit} className="grid gap-4 sm:grid-cols-2" noValidate>
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-gray-700">Load</label>
+                  <label htmlFor="invoiceLoad" className="mb-1 block text-sm font-medium text-gray-700">Load</label>
                   <select
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+                    id="invoiceLoad"
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                     value={form.loadId}
                     onChange={(e) => setForm((f) => ({ ...f, loadId: e.target.value }))}
                   >
@@ -120,30 +166,36 @@ export default function InvoicesPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-gray-700">Amount (USD)</label>
+                  <label htmlFor="invoiceAmount" className="mb-1 block text-sm font-medium text-gray-700">
+                    Amount (USD) <span aria-hidden="true" className="text-red-500">*</span>
+                  </label>
                   <input
+                    id="invoiceAmount"
                     type="number"
                     min="0"
                     step="0.01"
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                     value={form.amount}
                     onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))}
                     required
+                    aria-required="true"
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-gray-700">Due Date</label>
+                  <label htmlFor="invoiceDueDate" className="mb-1 block text-sm font-medium text-gray-700">Due Date</label>
                   <input
+                    id="invoiceDueDate"
                     type="date"
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                     value={form.dueDate}
                     onChange={(e) => setForm((f) => ({ ...f, dueDate: e.target.value }))}
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-gray-700">Status</label>
+                  <label htmlFor="invoiceStatus" className="mb-1 block text-sm font-medium text-gray-700">Status</label>
                   <select
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+                    id="invoiceStatus"
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                     value={form.status}
                     onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))}
                   >
@@ -153,14 +205,22 @@ export default function InvoicesPage() {
                   </select>
                 </div>
                 <div className="sm:col-span-2">
-                  <label className="mb-1 block text-sm font-medium text-gray-700">Notes</label>
+                  <label htmlFor="invoiceNotes" className="mb-1 block text-sm font-medium text-gray-700">Notes</label>
                   <textarea
+                    id="invoiceNotes"
                     rows={3}
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                     value={form.notes}
                     onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
                   />
                 </div>
+
+                {formError && (
+                  <p role="alert" className="rounded-lg bg-red-50 px-4 py-2 text-sm text-red-700 sm:col-span-2">
+                    {formError}
+                  </p>
+                )}
+
                 <div className="flex gap-2 sm:col-span-2">
                   <button
                     type="submit"
@@ -183,20 +243,25 @@ export default function InvoicesPage() {
 
           <SectionCard title={`Invoices (${invoices.length})`}>
             {loading ? (
-              <p className="text-sm text-gray-500">Loading…</p>
+              <div className="flex items-center gap-2 text-sm text-gray-500" aria-live="polite" aria-busy="true">
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" aria-hidden="true" />
+                Loading…
+              </div>
             ) : invoices.length === 0 ? (
               <p className="text-sm text-gray-500">No invoices yet. Add one above.</p>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full text-sm">
+                <table className="w-full text-sm" aria-label="Invoices table">
                   <thead>
                     <tr className="border-b border-gray-200 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
-                      <th className="pb-3 pr-4">Load</th>
-                      <th className="pb-3 pr-4">Amount</th>
-                      <th className="pb-3 pr-4">Due Date</th>
-                      <th className="pb-3 pr-4">Status</th>
-                      <th className="pb-3 pr-4">Notes</th>
-                      <th className="pb-3" />
+                      <th scope="col" className="pb-3 pr-4">Load</th>
+                      <th scope="col" className="pb-3 pr-4">Amount</th>
+                      <th scope="col" className="pb-3 pr-4">Due Date</th>
+                      <th scope="col" className="pb-3 pr-4">Status</th>
+                      <th scope="col" className="pb-3 pr-4">Notes</th>
+                      <th scope="col" className="pb-3">
+                        <span className="sr-only">Actions</span>
+                      </th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
@@ -212,8 +277,20 @@ export default function InvoicesPage() {
                         </td>
                         <td className="max-w-xs truncate py-3 pr-4 text-gray-500">{inv.notes}</td>
                         <td className="py-3 text-right">
-                          <button onClick={() => openEdit(inv)} className="mr-3 text-blue-600 hover:underline">Edit</button>
-                          <button onClick={() => handleDelete(inv.id)} className="text-red-600 hover:underline">Delete</button>
+                          <button
+                            onClick={() => openEdit(inv)}
+                            className="mr-3 text-blue-600 hover:underline focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 rounded"
+                            aria-label={`Edit invoice for ${formatCurrency(inv.amount)}`}
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => handleDelete(inv.id)}
+                            className="text-red-600 hover:underline focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1 rounded"
+                            aria-label={`Delete invoice for ${formatCurrency(inv.amount)}`}
+                          >
+                            Delete
+                          </button>
                         </td>
                       </tr>
                     ))}

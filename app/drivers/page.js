@@ -8,22 +8,32 @@ import SectionCard from '@/components/SectionCard';
 import { getDrivers, createDriver, updateDriver, deleteDriver } from '@/lib/firestore';
 import { DRIVER_STATUS } from '@/lib/constants';
 import { titleCase, statusBadgeClass } from '@/lib/utils';
+import { exportDriversCsv } from '@/lib/exportCsv';
 
 const EMPTY_FORM = { name: '', licenseNumber: '', phone: '', status: DRIVER_STATUS.ACTIVE };
 
 export default function DriversPage() {
   const [drivers, setDrivers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
   const [editId, setEditId] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [formError, setFormError] = useState('');
 
   async function load() {
     setLoading(true);
-    const data = await getDrivers();
-    setDrivers(data);
-    setLoading(false);
+    setError('');
+    try {
+      const data = await getDrivers();
+      setDrivers(data);
+    } catch (err) {
+      setError('Failed to load drivers. Please try again.');
+      console.error('Drivers load error:', err.message);
+    } finally {
+      setLoading(false);
+    }
   }
 
   useEffect(() => { load(); }, []);
@@ -31,6 +41,7 @@ export default function DriversPage() {
   function openAdd() {
     setForm(EMPTY_FORM);
     setEditId(null);
+    setFormError('');
     setShowForm(true);
   }
 
@@ -42,12 +53,14 @@ export default function DriversPage() {
       status: driver.status ?? DRIVER_STATUS.ACTIVE,
     });
     setEditId(driver.id);
+    setFormError('');
     setShowForm(true);
   }
 
   async function handleSubmit(e) {
     e.preventDefault();
     setSaving(true);
+    setFormError('');
     try {
       if (editId) {
         await updateDriver(editId, form);
@@ -56,15 +69,23 @@ export default function DriversPage() {
       }
       setShowForm(false);
       await load();
+    } catch (err) {
+      setFormError('Failed to save driver. Please try again.');
+      console.error('Driver save error:', err.message);
     } finally {
       setSaving(false);
     }
   }
 
   async function handleDelete(id) {
-    if (!confirm('Delete this driver?')) return;
-    await deleteDriver(id);
-    await load();
+    if (!confirm('Delete this driver? This action cannot be undone.')) return;
+    try {
+      await deleteDriver(id);
+      await load();
+    } catch (err) {
+      setError('Failed to delete driver. Please try again.');
+      console.error('Driver delete error:', err.message);
+    }
   }
 
   return (
@@ -76,49 +97,83 @@ export default function DriversPage() {
             title="Drivers"
             subtitle="Manage your driver roster"
             action={
-              <button
-                onClick={openAdd}
-                className="rounded-lg bg-blue-700 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-600"
-              >
-                + Add Driver
-              </button>
+              <div className="flex gap-2">
+                {drivers.length > 0 && (
+                  <button
+                    onClick={() => exportDriversCsv(drivers)}
+                    aria-label="Export drivers as CSV"
+                    className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+                  >
+                    Export CSV
+                  </button>
+                )}
+                <button
+                  onClick={openAdd}
+                  aria-label="Add a new driver"
+                  className="rounded-lg bg-blue-700 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-600"
+                >
+                  + Add Driver
+                </button>
+              </div>
             }
           />
+
+          {/* Global error banner */}
+          {error && (
+            <div role="alert" className="mb-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
+              {error}
+            </div>
+          )}
 
           {/* Form */}
           {showForm && (
             <SectionCard title={editId ? 'Edit Driver' : 'Add Driver'} className="mb-6">
-              <form onSubmit={handleSubmit} className="grid gap-4 sm:grid-cols-2">
+              <form onSubmit={handleSubmit} className="grid gap-4 sm:grid-cols-2" noValidate>
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-gray-700">Full Name</label>
+                  <label htmlFor="driverName" className="mb-1 block text-sm font-medium text-gray-700">
+                    Full Name <span aria-hidden="true" className="text-red-500">*</span>
+                  </label>
                   <input
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+                    id="driverName"
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                     value={form.name}
                     onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
                     required
+                    aria-required="true"
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-gray-700">License Number</label>
+                  <label htmlFor="licenseNumber" className="mb-1 block text-sm font-medium text-gray-700">
+                    License Number <span aria-hidden="true" className="text-red-500">*</span>
+                  </label>
                   <input
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+                    id="licenseNumber"
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                     value={form.licenseNumber}
                     onChange={(e) => setForm((f) => ({ ...f, licenseNumber: e.target.value }))}
                     required
+                    aria-required="true"
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-gray-700">Phone</label>
+                  <label htmlFor="driverPhone" className="mb-1 block text-sm font-medium text-gray-700">
+                    Phone
+                  </label>
                   <input
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+                    id="driverPhone"
+                    type="tel"
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                     value={form.phone}
                     onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-gray-700">Status</label>
+                  <label htmlFor="driverStatus" className="mb-1 block text-sm font-medium text-gray-700">
+                    Status
+                  </label>
                   <select
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+                    id="driverStatus"
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                     value={form.status}
                     onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))}
                   >
@@ -127,6 +182,13 @@ export default function DriversPage() {
                     ))}
                   </select>
                 </div>
+
+                {formError && (
+                  <p role="alert" className="rounded-lg bg-red-50 px-4 py-2 text-sm text-red-700 sm:col-span-2">
+                    {formError}
+                  </p>
+                )}
+
                 <div className="flex gap-2 sm:col-span-2">
                   <button
                     type="submit"
@@ -150,19 +212,24 @@ export default function DriversPage() {
           {/* Table */}
           <SectionCard title={`Drivers (${drivers.length})`}>
             {loading ? (
-              <p className="text-sm text-gray-500">Loading…</p>
+              <div className="flex items-center gap-2 text-sm text-gray-500" aria-live="polite" aria-busy="true">
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" aria-hidden="true" />
+                Loading…
+              </div>
             ) : drivers.length === 0 ? (
               <p className="text-sm text-gray-500">No drivers yet. Add one above.</p>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full text-sm">
+                <table className="w-full text-sm" aria-label="Drivers table">
                   <thead>
                     <tr className="border-b border-gray-200 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
-                      <th className="pb-3 pr-4">Name</th>
-                      <th className="pb-3 pr-4">License</th>
-                      <th className="pb-3 pr-4">Phone</th>
-                      <th className="pb-3 pr-4">Status</th>
-                      <th className="pb-3" />
+                      <th scope="col" className="pb-3 pr-4">Name</th>
+                      <th scope="col" className="pb-3 pr-4">License</th>
+                      <th scope="col" className="pb-3 pr-4">Phone</th>
+                      <th scope="col" className="pb-3 pr-4">Status</th>
+                      <th scope="col" className="pb-3">
+                        <span className="sr-only">Actions</span>
+                      </th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
@@ -177,8 +244,20 @@ export default function DriversPage() {
                           </span>
                         </td>
                         <td className="py-3 text-right">
-                          <button onClick={() => openEdit(d)} className="mr-3 text-blue-600 hover:underline">Edit</button>
-                          <button onClick={() => handleDelete(d.id)} className="text-red-600 hover:underline">Delete</button>
+                          <button
+                            onClick={() => openEdit(d)}
+                            className="mr-3 text-blue-600 hover:underline focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 rounded"
+                            aria-label={`Edit driver ${d.name}`}
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => handleDelete(d.id)}
+                            className="text-red-600 hover:underline focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1 rounded"
+                            aria-label={`Delete driver ${d.name}`}
+                          >
+                            Delete
+                          </button>
                         </td>
                       </tr>
                     ))}
