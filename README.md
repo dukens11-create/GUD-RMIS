@@ -1,6 +1,6 @@
 # GUD RMIS
 
-**GUD Road Management Information System** — a Next.js 14 + Firebase web platform for managing drivers, loads, invoices, and operational tasks.
+**GUD Road Management Information System** — a Next.js 14 + Firebase web platform for managing drivers, loads, invoices, vehicles, incidents, and operational tasks.
 
 ## Features
 
@@ -8,6 +8,8 @@
 - 🚗 **Drivers** — create, edit, and track driver roster with status badges
 - 📦 **Loads** — manage shipments with origin, destination, driver assignment, and status
 - 🧾 **Invoices** — billing management with amount tracking and payment status
+- 🚛 **Vehicles** — full CRUD for fleet vehicles (VIN, model, plate, status)
+- 🚨 **Incidents** — record and track accidents/events (date, driver, description, severity)
 - 📋 **Task Board** — Kanban-style task management (To Do / In Progress / Done)
 - 📊 **Dashboard** — overview stats and task board at a glance
 - 🔒 **Firestore Security Rules** — authenticated access only
@@ -75,6 +77,8 @@ firebase deploy --only firestore:rules
 │   ├── drivers/page.js    # Driver CRUD
 │   ├── loads/page.js      # Load CRUD
 │   ├── invoices/page.js   # Invoice CRUD
+│   ├── vehicles/page.js   # Vehicle CRUD (VIN, model, plate, status)
+│   ├── incidents/page.js  # Incident CRUD (date, driver, description, severity)
 │   └── api/               # REST API routes (drivers, loads, invoices, tasks)
 ├── components/            # Reusable UI components
 ├── lib/
