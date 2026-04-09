@@ -190,6 +190,13 @@ export default function LiveTracker({ routeCoords = [] }) {
 
   // ─── GPS position handler (SINGLE SOURCE OF TRUTH pipeline) ──────────────
 
+  // Keep a ref to followMode so the GPS callback reads the latest value without
+  // needing to be re-created (which would require re-registering the watcher).
+  const followModeRef = useRef(followMode);
+  useEffect(() => {
+    followModeRef.current = followMode;
+  }, [followMode]);
+
   const handlePosition = useCallback(
     (geoPos) => {
       const { latitude, longitude, speed, accuracy: acc, heading: hdg } = geoPos.coords;
@@ -237,8 +244,8 @@ export default function LiveTracker({ routeCoords = [] }) {
       // STEP 5 – Animate marker from previous to new position
       animateMarker(prevPositionRef.current, finalPosition);
 
-      // STEP 6 – Camera follow (uses the SAME accepted position)
-      if (followMode && mapRef.current) {
+      // STEP 6 – Camera follow (uses the SAME accepted position, reads latest followMode via ref)
+      if (followModeRef.current && mapRef.current) {
         mapRef.current.panTo([finalPosition.lat, finalPosition.lng], {
           animate: true,
           duration: 0.8,
@@ -253,17 +260,8 @@ export default function LiveTracker({ routeCoords = [] }) {
       setStatusText('Tracking live position');
       setLastLogEntry(logEntry);
     },
-    // followMode is captured via ref trick below to avoid re-registering the watch
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [animateMarker, routeCoords]
   );
-
-  // Keep a ref to followMode so the GPS callback reads the latest value without
-  // needing to be re-created (which would require re-registering the watcher).
-  const followModeRef = useRef(followMode);
-  useEffect(() => {
-    followModeRef.current = followMode;
-  }, [followMode]);
 
   // ─── Start / stop GPS watcher ─────────────────────────────────────────────
 

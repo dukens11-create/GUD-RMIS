@@ -88,7 +88,8 @@ firebase deploy --only firestore:rules
 ├── .github/
 │   └── workflows/ci.yml       # GitHub Actions: lint, build, and test
 ├── __tests__/
-│   ├── app/
+│   └── utils.test.js          # Unit tests for utility functions
+├── app/
 │   ├── layout.js              # Root layout with AuthProvider
 │   ├── page.js                # Redirects to /dashboard
 │   ├── login/page.js          # Login page
