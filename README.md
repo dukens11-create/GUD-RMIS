@@ -12,6 +12,7 @@
 - 🚨 **Incidents** — report and track accidents, violations, and risk events with severity levels; CSV export
 - 📋 **Task Board** — Kanban-style task management (To Do / In Progress / Done)
 - 📊 **Dashboard** — overview stats and task board at a glance
+- 📍 **Live Tracking** — real-time GPS truck tracking on an interactive map (Leaflet + OpenStreetMap) with smooth marker animation, snap-to-route, camera follow, and dev-console GPS logging
 - 🔒 **Firestore Security Rules** — least-privilege, per-collection rules with admin-role enforcement
 
 ## Tech Stack
@@ -87,8 +88,7 @@ firebase deploy --only firestore:rules
 ├── .github/
 │   └── workflows/ci.yml       # GitHub Actions: lint, build, and test
 ├── __tests__/
-│   └── utils.test.js          # Unit tests for utility functions
-├── app/
+│   ├── app/
 │   ├── layout.js              # Root layout with AuthProvider
 │   ├── page.js                # Redirects to /dashboard
 │   ├── login/page.js          # Login page
@@ -98,18 +98,47 @@ firebase deploy --only firestore:rules
 │   ├── loads/page.js          # Load CRUD + CSV export
 │   ├── invoices/page.js       # Invoice CRUD + CSV export
 │   ├── incidents/page.js      # Incident CRUD + CSV export
+│   ├── tracking/page.js       # Live GPS tracking map
 │   └── api/                   # REST API routes
 ├── components/                # Reusable UI components
+│   └── LiveTracker.js         # Real-time GPS map component
 ├── lib/
 │   ├── firebase.js            # Firebase app initialisation
 │   ├── auth.js                # Auth context & helpers
 │   ├── firestore.js           # Firestore CRUD helpers
 │   ├── constants.js           # Collection names, status values, nav links
 │   ├── exportCsv.js           # CSV export utilities
+│   ├── gps.js                 # GPS math utilities (distance, filtering, snap, interpolation)
 │   └── utils.js               # Formatting utilities
 ├── firestore.rules            # Least-privilege Firestore security rules
 ├── jest.config.js             # Jest configuration
 └── vercel.json                # Vercel deployment configuration
+```
+
+## Live GPS Tracking
+
+Navigate to `/tracking` to open the real-time truck tracking map.
+
+### How it works
+
+| Concern | Implementation |
+|---|---|
+| Location stream | `navigator.geolocation.watchPosition` with `enableHighAccuracy: true` |
+| Single source of truth | One `acceptedPosition` ref drives the marker, speed display, and camera |
+| GPS filtering | `isValidGpsUpdate` in `lib/gps.js` – relaxed while speed > 5 mph; rejects bad accuracy or huge jumps only |
+| Snap-to-route | `snapToRoute` in `lib/gps.js` – forward-only window (never big backward resets) |
+| Route progress lock | `currentRouteIndex` only moves forward (small back-tolerance for GPS jitter) |
+| Smooth animation | `requestAnimationFrame` interpolation via `interpolatePosition` over 800 ms |
+| Camera follow | `map.panTo` on every accepted fix when follow mode is active |
+| Dev logging | Every accepted fix logged to `console.info` with lat, lng, speed, accuracy, heading, routeIndex, and timestamp |
+
+### Providing a route
+
+Pass an array of `[lat, lng]` pairs as `routeCoords` to `<LiveTracker />` to enable snap-to-route.  
+In production, fetch the active load's waypoints from Firestore and pass them in.
+
+```jsx
+<LiveTracker routeCoords={[[37.77, -122.41], [37.78, -122.42], /* … */]} />
 ```
 
 ## Deployment
