@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "postbuild": "mv out dist",
     "start": "next start",
     "lint": "next lint",
     "test": "jest"
