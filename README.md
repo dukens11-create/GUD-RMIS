@@ -162,17 +162,17 @@ In production, fetch the active load's waypoints from Firestore and pass them in
 ### Render
 
 1. Push your branch to GitHub.
-2. In the [Render dashboard](https://dashboard.render.com), create a new **Web Service** and connect your repository.
+2. In the [Render dashboard](https://dashboard.render.com), create a new **Web Service** (not a Static Site) and connect your repository.
 3. Use the following settings (or let the `render.yaml` blueprint configure them automatically):
    - **Build Command:** `npm install; npm run build`
    - **Start Command:** `npm start`
-   - **Publish Directory:** `.next`
+   - **Publish Directory:** *(leave blank)*
 4. Add all `NEXT_PUBLIC_FIREBASE_*` environment variables in the Render dashboard under **Environment**.
 5. Click **Deploy**.
 
-> **Note:** Next.js outputs built assets to the `.next` directory — **not** `dist`, `Dist`, or `build`.  
-> Setting the Publish Directory to anything other than `.next` will cause the deployment to fail with  
-> `Publish directory <name> does not exist!`
+> **Important:** Because this app uses server-side rendering (SSR) and API routes, it must be deployed as a **Web Service** (Node.js server) — **not** as a Static Site.  
+> **Leave the Publish Directory field blank.** Render will start the Next.js server using `npm start` (`next start`).  
+> Setting a Publish Directory tells Render to serve static files only, which will cause the deployment to fail.
 
 ### Docker
 
