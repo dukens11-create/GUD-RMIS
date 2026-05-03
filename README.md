@@ -113,6 +113,7 @@ firebase deploy --only firestore:rules
 │   └── utils.js               # Formatting utilities
 ├── firestore.rules            # Least-privilege Firestore security rules
 ├── jest.config.js             # Jest configuration
+├── render.yaml                # Render.com deployment blueprint
 └── vercel.json                # Vercel deployment configuration
 ```
 
@@ -157,6 +158,21 @@ In production, fetch the active load's waypoints from Firestore and pass them in
 2. Publish directory: `.next`
 3. Add all `NEXT_PUBLIC_FIREBASE_*` environment variables in the Netlify dashboard.
 4. Install the [Next.js Netlify plugin](https://docs.netlify.com/integrations/frameworks/next-js/overview/).
+
+### Render
+
+1. Push your branch to GitHub.
+2. In the [Render dashboard](https://dashboard.render.com), create a new **Web Service** and connect your repository.
+3. Use the following settings (or let the `render.yaml` blueprint configure them automatically):
+   - **Build Command:** `npm install; npm run build`
+   - **Start Command:** `npm start`
+   - **Publish Directory:** `.next`
+4. Add all `NEXT_PUBLIC_FIREBASE_*` environment variables in the Render dashboard under **Environment**.
+5. Click **Deploy**.
+
+> **Note:** Next.js outputs built assets to the `.next` directory — **not** `dist`, `Dist`, or `build`.  
+> Setting the Publish Directory to anything other than `.next` will cause the deployment to fail with  
+> `Publish directory <name> does not exist!`
 
 ### Docker
 
