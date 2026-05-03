@@ -77,10 +77,12 @@ firebase deploy --only firestore:rules
 | Command | Description |
 |---|---|
 | `npm run dev` | Start development server |
-| `npm run build` | Production build |
+| `npm run build` | Production build (static export → `out/`, then moved to `dist/`) |
 | `npm start` | Start production server |
 | `npm run lint` | Run ESLint |
 | `npm test` | Run Jest unit tests |
+
+> **Static export note:** `npm run build` runs `next build` (which, with `output: 'export'` configured in `next.config.js`, generates static HTML/CSS/JS into an `out/` directory) and then automatically moves `out/` to `dist/`. This means `npm run build` produces a `dist/` folder containing the fully static site ready for deployment.
 
 ## Project Structure
 
@@ -162,17 +164,16 @@ In production, fetch the active load's waypoints from Firestore and pass them in
 ### Render
 
 1. Push your branch to GitHub.
-2. In the [Render dashboard](https://dashboard.render.com), create a new **Web Service** (not a Static Site) and connect your repository.
-3. Use the following settings (or let the `render.yaml` blueprint configure them automatically):
+2. In the [Render dashboard](https://dashboard.render.com), create a new **Static Site** and connect your repository.
+3. Use the following settings:
    - **Build Command:** `npm install; npm run build`
-   - **Start Command:** `npm start`
-   - **Publish Directory:** *(leave blank)*
+   - **Publish Directory:** `dist`
 4. Add all `NEXT_PUBLIC_FIREBASE_*` environment variables in the Render dashboard under **Environment**.
 5. Click **Deploy**.
 
-> **Important:** Because this app uses server-side rendering (SSR) and API routes, it must be deployed as a **Web Service** (Node.js server) — **not** as a Static Site.  
-> **Leave the Publish Directory field blank.** Render will start the Next.js server using `npm start` (`next start`).  
-> Setting a Publish Directory tells Render to serve static files only, which will cause the deployment to fail.
+> **Limitations:** This project uses `output: 'export'` in `next.config.js` to generate a fully static site. This means:
+> - **Server-side rendering (SSR) is disabled** — all pages are pre-rendered at build time as static HTML.
+> - **API routes are disabled** — the `/api/*` endpoints will not function in the deployed static site. All data fetching must be done client-side via the Firebase SDK directly from the browser.
 
 ### Docker
 

@@ -1,3 +1,5 @@
+export const dynamic = 'force-static';
+
 import { NextResponse } from 'next/server';
 import { getAll, create } from '@/lib/firestore';
 import { COLLECTIONS } from '@/lib/constants';

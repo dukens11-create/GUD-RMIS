@@ -1,4 +1,4 @@
-export const dynamic = 'force-dynamic';
+export const dynamic = 'force-static';
 
 import { NextResponse } from 'next/server';
 import { getDrivers, createDriver } from '@/lib/firestore';
