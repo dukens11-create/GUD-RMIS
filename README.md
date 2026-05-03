@@ -83,6 +83,11 @@ firebase deploy --only firestore:rules
 | `npm test` | Run Jest unit tests |
 
 > **Static export note:** `npm run build` runs `next build` (which, with `output: 'export'` configured in `next.config.js`, generates static HTML/CSS/JS into an `out/` directory) and then automatically moves `out/` to `dist/`. This means `npm run build` produces a `dist/` folder containing the fully static site ready for deployment.
+>
+> **Static export limitations:**
+> - Server-side `redirect()` from `next/navigation` is **not supported** in static export — it generates HTML marked with `id="__next_error__"` which causes a "client-side exception" error overlay in the browser. The root page uses a client-side `useRouter().replace()` redirect instead.
+> - API routes (`/api/*`) are **not exported** as part of the static build. All data operations must use the Firebase SDK directly from the browser (as the page components already do).
+> - Pages that require dynamic server-side features (SSR, middleware, cookies, etc.) are not supported.
 
 ## Project Structure
 
@@ -174,6 +179,10 @@ In production, fetch the active load's waypoints from Firestore and pass them in
 > **Limitations:** This project uses `output: 'export'` in `next.config.js` to generate a fully static site. This means:
 > - **Server-side rendering (SSR) is disabled** — all pages are pre-rendered at build time as static HTML.
 > - **API routes are disabled** — the `/api/*` endpoints will not function in the deployed static site. All data fetching must be done client-side via the Firebase SDK directly from the browser.
+> - **Client-side routing** — the root `/` page uses a JavaScript redirect to `/dashboard`. Make sure all `NEXT_PUBLIC_FIREBASE_*` environment variables are set in the Render dashboard so that Firebase initialises correctly on page load.
+>
+> **Troubleshooting: "Application error: a client-side exception has occurred"**
+> This error is caused by using the server-side `redirect()` helper from `next/navigation` in a static export — it generates HTML with `id="__next_error__"` which triggers the error overlay. The fix is to use a client-side `useRouter().replace()` redirect instead (already applied to `app/page.js`).
 
 ### Docker
 
