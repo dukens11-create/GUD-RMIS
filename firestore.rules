@@ -33,6 +33,14 @@ service cloud.firestore {
       allow create: if isAuthenticated() && isAdmin();
       allow update: if isAuthenticated() && isAdmin() && doesNotAlterCreatedAt();
       allow delete: if isAuthenticated() && isAdmin();
+
+      // Driver document metadata subcollection
+      match /documents/{docId} {
+        allow read: if isAuthenticated();
+        allow create: if isAuthenticated();
+        allow update: if isAuthenticated();
+        allow delete: if isAuthenticated();
+      }
     }
 
     // ── Vehicles ─────────────────────────────────────────────────────────────
@@ -41,6 +49,14 @@ service cloud.firestore {
       allow create: if isAuthenticated() && isAdmin();
       allow update: if isAuthenticated() && isAdmin() && doesNotAlterCreatedAt();
       allow delete: if isAuthenticated() && isAdmin();
+
+      // Vehicle document metadata subcollection
+      match /documents/{docId} {
+        allow read: if isAuthenticated();
+        allow create: if isAuthenticated();
+        allow update: if isAuthenticated();
+        allow delete: if isAuthenticated();
+      }
     }
 
     // ── Loads ─────────────────────────────────────────────────────────────────

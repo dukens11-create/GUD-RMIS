@@ -5,6 +5,7 @@ import ProtectedRoute from '@/components/ProtectedRoute';
 import Navbar from '@/components/Navbar';
 import PageHeader from '@/components/PageHeader';
 import SectionCard from '@/components/SectionCard';
+import DocumentPanel from '@/components/DocumentPanel';
 import { getVehicles, createVehicle, updateVehicle, deleteVehicle } from '@/lib/firestore';
 import { VEHICLE_STATUS } from '@/lib/constants';
 import { titleCase, statusBadgeClass } from '@/lib/utils';
@@ -22,6 +23,11 @@ const EMPTY_FORM = {
   notes: '',
 };
 
+const VEHICLE_DOC_TYPES = [
+  { docType: 'truck_registration', label: 'Truck Registration' },
+  { docType: 'dot_inspection', label: 'DOT Inspection' },
+];
+
 export default function VehiclesPage() {
   const [vehicles, setVehicles] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -31,6 +37,7 @@ export default function VehiclesPage() {
   const [editId, setEditId] = useState(null);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
+  const [docVehicleId, setDocVehicleId] = useState(null);
 
   async function load() {
     setLoading(true);
@@ -337,6 +344,14 @@ export default function VehiclesPage() {
                             Edit
                           </button>
                           <button
+                            onClick={() => setDocVehicleId(docVehicleId === v.id ? null : v.id)}
+                            className="mr-3 text-gray-600 hover:underline focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-1 rounded"
+                            aria-label={`${docVehicleId === v.id ? 'Hide' : 'Show'} documents for vehicle ${v.make} ${v.model}`}
+                            aria-expanded={docVehicleId === v.id}
+                          >
+                            {docVehicleId === v.id ? 'Hide Docs' : 'Documents'}
+                          </button>
+                          <button
                             onClick={() => handleDelete(v.id)}
                             className="text-red-600 hover:underline focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1 rounded"
                             aria-label={`Delete vehicle ${v.make} ${v.model}`}
@@ -351,6 +366,28 @@ export default function VehiclesPage() {
               </div>
             )}
           </SectionCard>
+
+          {/* Documents section — shown when a vehicle row's Documents button is active */}
+          {docVehicleId && (() => {
+            const vehicle = vehicles.find((v) => v.id === docVehicleId);
+            return (
+              <SectionCard
+                title={`Documents — ${vehicle ? `${vehicle.make} ${vehicle.model}` : docVehicleId}`}
+                className="mt-6"
+              >
+                <div className="grid gap-4 sm:grid-cols-2">
+                  {VEHICLE_DOC_TYPES.map(({ docType, label }) => (
+                    <DocumentPanel
+                      key={docType}
+                      label={label}
+                      docType={docType}
+                      entityPath={`vehicles/${docVehicleId}`}
+                    />
+                  ))}
+                </div>
+              </SectionCard>
+            );
+          })()}
         </main>
       </div>
     </ProtectedRoute>

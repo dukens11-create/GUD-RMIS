@@ -1,0 +1,46 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // ── Helpers ──────────────────────────────────────────────────────────────
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isWithinSizeLimit() {
+      return request.resource.size < 20 * 1024 * 1024; // 20 MB max
+    }
+
+    function isAllowedContentType() {
+      return request.resource.contentType.matches(
+        '(application/pdf|image/.*|application/msword|application/vnd.openxmlformats-officedocument.wordprocessingml.document)'
+      );
+    }
+
+    function isValidUpload() {
+      return isWithinSizeLimit() && isAllowedContentType();
+    }
+
+    // ── Driver documents ─────────────────────────────────────────────────────
+    // Path: drivers/{driverId}/{docType}/{filename}
+    // Any authenticated user may read, upload, and delete driver documents.
+    match /drivers/{driverId}/{docType}/{filename} {
+      allow read:   if isAuthenticated();
+      allow write:  if isAuthenticated() && isValidUpload();
+      allow delete: if isAuthenticated();
+    }
+
+    // ── Vehicle documents ─────────────────────────────────────────────────────
+    // Path: vehicles/{vehicleId}/{docType}/{filename}
+    match /vehicles/{vehicleId}/{docType}/{filename} {
+      allow read:   if isAuthenticated();
+      allow write:  if isAuthenticated() && isValidUpload();
+      allow delete: if isAuthenticated();
+    }
+
+    // ── Deny everything else ─────────────────────────────────────────────────
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
