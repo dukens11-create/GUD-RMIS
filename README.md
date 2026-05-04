@@ -173,15 +173,17 @@ In production, fetch the active load's waypoints from Firestore and pass them in
 3. Use the following settings:
    - **Build Command:** `npm install; npm run build`
    - **Publish Directory:** `dist`
-4. Add all `NEXT_PUBLIC_FIREBASE_*` environment variables in the Render dashboard under **Environment**.
+4. Add the following environment variables in the Render dashboard under **Environment** (all are required):
+   - `NEXT_PUBLIC_FIREBASE_API_KEY`
+   - `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN`
+   - `NEXT_PUBLIC_FIREBASE_PROJECT_ID`
+   - `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET`
+   - `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID`
+   - `NEXT_PUBLIC_FIREBASE_APP_ID`
+   - `NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID` (optional)
 5. Click **Deploy**.
 
-> **Limitations:** This project uses `output: 'export'` in `next.config.js` to generate a fully static site. This means:
-> - **Server-side rendering (SSR) is disabled** — all pages are pre-rendered at build time as static HTML.
-> - **API routes have been removed** — `/api/*` endpoints cannot run on static hosting. All data operations use the Firebase SDK from the browser via `lib/firestore.js`.
-> - **Client-side routing** — the root `/` page uses a JavaScript redirect to `/dashboard`.
->
-> **Critical:** `NEXT_PUBLIC_FIREBASE_*` environment variables **must be set in Render's Environment settings before your first deploy** (or before triggering a redeploy after changing them). Next.js embeds these values at build time. If they are missing the app will show a "Configuration Error" banner rather than a blank crash screen — add the variables and redeploy.
+> **Critical — redeploy after setting env vars:** `NEXT_PUBLIC_FIREBASE_*` environment variables **must be set in Render's Environment settings before triggering a deploy**. Next.js embeds these values into the static bundle at **build time** — changing them after a deploy has no effect until you trigger a new deploy. If they are missing, the app shows a "Configuration Error" banner listing exactly which variables need to be added.
 >
 > **Troubleshooting: "Application error: a client-side exception has occurred"**
 > The most common causes on static hosting:
