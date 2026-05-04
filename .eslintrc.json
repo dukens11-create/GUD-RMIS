@@ -1,3 +1,16 @@
 {
-  "extends": "next/core-web-vitals"
+  "extends": "next/core-web-vitals",
+  "rules": {
+    "no-restricted-syntax": [
+      "error",
+      {
+        "selector": "CallExpression[callee.name='fetch'] > Literal[value=/\\/api\\//]",
+        "message": "Next.js API routes (/api/*) are not available on static hosting. Use the Firebase SDK directly (see lib/firestore.js)."
+      },
+      {
+        "selector": "CallExpression[callee.name='fetch'] > TemplateLiteral > TemplateElement[value.raw=/\\/api\\//]",
+        "message": "Next.js API routes (/api/*) are not available on static hosting. Use the Firebase SDK directly (see lib/firestore.js)."
+      }
+    ]
+  }
 }

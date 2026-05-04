@@ -86,8 +86,9 @@ firebase deploy --only firestore:rules
 >
 > **Static export limitations:**
 > - Server-side `redirect()` from `next/navigation` is **not supported** in static export — it generates HTML marked with `id="__next_error__"` which causes a "client-side exception" error overlay in the browser. The root page uses a client-side `useRouter().replace()` redirect instead.
-> - API routes (`/api/*`) are **not exported** as part of the static build. All data operations must use the Firebase SDK directly from the browser (as the page components already do).
+> - **API routes (`/api/*`) have been removed.** They cannot run on static hosting. All data operations use the Firebase SDK directly from the browser via `lib/firestore.js`. An ESLint rule (`no-restricted-syntax`) will flag any future attempt to call `/api/` paths via `fetch()`.
 > - Pages that require dynamic server-side features (SSR, middleware, cookies, etc.) are not supported.
+> - **`NEXT_PUBLIC_FIREBASE_*` variables must be set at build time.** On Render (and other static hosts), configure them in the platform's Environment settings *before* triggering a build — Next.js embeds them into the static bundle at compile time and they cannot be injected at runtime. If they are missing, the app displays a "Configuration Error" banner instead of crashing with a blank screen.
 
 ## Project Structure
 
@@ -106,8 +107,7 @@ firebase deploy --only firestore:rules
 │   ├── loads/page.js          # Load CRUD + CSV export
 │   ├── invoices/page.js       # Invoice CRUD + CSV export
 │   ├── incidents/page.js      # Incident CRUD + CSV export
-│   ├── tracking/page.js       # Live GPS tracking map
-│   └── api/                   # REST API routes
+│   └── tracking/page.js       # Live GPS tracking map
 ├── components/                # Reusable UI components
 │   └── LiveTracker.js         # Real-time GPS map component
 ├── lib/
@@ -178,11 +178,16 @@ In production, fetch the active load's waypoints from Firestore and pass them in
 
 > **Limitations:** This project uses `output: 'export'` in `next.config.js` to generate a fully static site. This means:
 > - **Server-side rendering (SSR) is disabled** — all pages are pre-rendered at build time as static HTML.
-> - **API routes are disabled** — the `/api/*` endpoints will not function in the deployed static site. All data fetching must be done client-side via the Firebase SDK directly from the browser.
-> - **Client-side routing** — the root `/` page uses a JavaScript redirect to `/dashboard`. Make sure all `NEXT_PUBLIC_FIREBASE_*` environment variables are set in the Render dashboard so that Firebase initialises correctly on page load.
+> - **API routes have been removed** — `/api/*` endpoints cannot run on static hosting. All data operations use the Firebase SDK from the browser via `lib/firestore.js`.
+> - **Client-side routing** — the root `/` page uses a JavaScript redirect to `/dashboard`.
+>
+> **Critical:** `NEXT_PUBLIC_FIREBASE_*` environment variables **must be set in Render's Environment settings before your first deploy** (or before triggering a redeploy after changing them). Next.js embeds these values at build time. If they are missing the app will show a "Configuration Error" banner rather than a blank crash screen — add the variables and redeploy.
 >
 > **Troubleshooting: "Application error: a client-side exception has occurred"**
-> This error is caused by using the server-side `redirect()` helper from `next/navigation` in a static export — it generates HTML with `id="__next_error__"` which triggers the error overlay. The fix is to use a client-side `useRouter().replace()` redirect instead (already applied to `app/page.js`).
+> The most common causes on static hosting:
+> 1. **Missing Firebase env vars** — set all `NEXT_PUBLIC_FIREBASE_*` variables in Render → Environment and trigger a new deploy.
+> 2. **Server-side redirect** — using `redirect()` from `next/navigation` in a Server Component generates `id="__next_error__"` HTML. The root page already uses `useRouter().replace()` instead.
+> 3. **API routes called from client code** — `/api/*` routes don't exist on static hosting. Use Firebase SDK directly.
 
 ### Docker
 
