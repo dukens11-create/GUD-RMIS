@@ -5,6 +5,7 @@ import ProtectedRoute from '@/components/ProtectedRoute';
 import Navbar from '@/components/Navbar';
 import PageHeader from '@/components/PageHeader';
 import SectionCard from '@/components/SectionCard';
+import AttachmentsPanel from '@/components/AttachmentsPanel';
 import { getIncidents, createIncident, updateIncident, deleteIncident } from '@/lib/firestore';
 import { getDrivers } from '@/lib/firestore';
 import { getVehicles } from '@/lib/firestore';
@@ -35,6 +36,7 @@ export default function IncidentsPage() {
   const [editId, setEditId] = useState(null);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
+  const [attachIncidentId, setAttachIncidentId] = useState(null);
 
   async function load() {
     setLoading(true);
@@ -371,6 +373,14 @@ export default function IncidentsPage() {
                             Edit
                           </button>
                           <button
+                            onClick={() => setAttachIncidentId(attachIncidentId === inc.id ? null : inc.id)}
+                            className="mr-3 text-gray-600 hover:underline focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-1 rounded"
+                            aria-label={`${attachIncidentId === inc.id ? 'Hide' : 'Show'} attachments for incident on ${inc.date}`}
+                            aria-expanded={attachIncidentId === inc.id}
+                          >
+                            {attachIncidentId === inc.id ? 'Hide Attachments' : 'Attachments'}
+                          </button>
+                          <button
                             onClick={() => handleDelete(inc.id)}
                             className="text-red-600 hover:underline focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1 rounded"
                             aria-label={`Delete incident on ${inc.date}`}
@@ -385,6 +395,19 @@ export default function IncidentsPage() {
               </div>
             )}
           </SectionCard>
+
+          {/* Attachments section — shown when an incident row's Attachments button is active */}
+          {attachIncidentId && (() => {
+            const inc = incidents.find((i) => i.id === attachIncidentId);
+            return (
+              <SectionCard
+                title={`Attachments — ${inc ? `${inc.type} (${inc.date})` : attachIncidentId}`}
+                className="mt-6"
+              >
+                <AttachmentsPanel entityPath={`incidents/${attachIncidentId}`} />
+              </SectionCard>
+            );
+          })()}
         </main>
       </div>
     </ProtectedRoute>

@@ -38,6 +38,38 @@ service firebase.storage {
       allow delete: if isAuthenticated();
     }
 
+    // ── Load attachments ──────────────────────────────────────────────────────
+    // Path: loads/{loadId}/attachments/{filename}
+    match /loads/{loadId}/attachments/{filename} {
+      allow read:   if isAuthenticated();
+      allow write:  if isAuthenticated() && isValidUpload();
+      allow delete: if isAuthenticated();
+    }
+
+    // ── Invoice attachments ───────────────────────────────────────────────────
+    // Path: invoices/{invoiceId}/attachments/{filename}
+    match /invoices/{invoiceId}/attachments/{filename} {
+      allow read:   if isAuthenticated();
+      allow write:  if isAuthenticated() && isValidUpload();
+      allow delete: if isAuthenticated();
+    }
+
+    // ── Incident attachments ──────────────────────────────────────────────────
+    // Path: incidents/{incidentId}/attachments/{filename}
+    match /incidents/{incidentId}/attachments/{filename} {
+      allow read:   if isAuthenticated();
+      allow write:  if isAuthenticated() && isValidUpload();
+      allow delete: if isAuthenticated();
+    }
+
+    // ── Tracking attachments ──────────────────────────────────────────────────
+    // Path: tracking/{trackingId}/attachments/{filename}
+    match /tracking/{trackingId}/attachments/{filename} {
+      allow read:   if isAuthenticated();
+      allow write:  if isAuthenticated() && isValidUpload();
+      allow delete: if isAuthenticated();
+    }
+
     // ── Deny everything else ─────────────────────────────────────────────────
     match /{allPaths=**} {
       allow read, write: if false;

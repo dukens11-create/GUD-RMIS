@@ -5,6 +5,7 @@ import ProtectedRoute from '@/components/ProtectedRoute';
 import Navbar from '@/components/Navbar';
 import PageHeader from '@/components/PageHeader';
 import SectionCard from '@/components/SectionCard';
+import AttachmentsPanel from '@/components/AttachmentsPanel';
 import { getInvoices, createInvoice, updateInvoice, deleteInvoice } from '@/lib/firestore';
 import { getLoads } from '@/lib/firestore';
 import { INVOICE_STATUS } from '@/lib/constants';
@@ -29,6 +30,7 @@ export default function InvoicesPage() {
   const [editId, setEditId] = useState(null);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
+  const [attachInvoiceId, setAttachInvoiceId] = useState(null);
 
   async function load() {
     setLoading(true);
@@ -285,6 +287,14 @@ export default function InvoicesPage() {
                             Edit
                           </button>
                           <button
+                            onClick={() => setAttachInvoiceId(attachInvoiceId === inv.id ? null : inv.id)}
+                            className="mr-3 text-gray-600 hover:underline focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-1 rounded"
+                            aria-label={`${attachInvoiceId === inv.id ? 'Hide' : 'Show'} attachments for invoice ${formatCurrency(inv.amount)}`}
+                            aria-expanded={attachInvoiceId === inv.id}
+                          >
+                            {attachInvoiceId === inv.id ? 'Hide Attachments' : 'Attachments'}
+                          </button>
+                          <button
                             onClick={() => handleDelete(inv.id)}
                             className="text-red-600 hover:underline focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1 rounded"
                             aria-label={`Delete invoice for ${formatCurrency(inv.amount)}`}
@@ -299,6 +309,19 @@ export default function InvoicesPage() {
               </div>
             )}
           </SectionCard>
+
+          {/* Attachments section — shown when an invoice row's Attachments button is active */}
+          {attachInvoiceId && (() => {
+            const inv = invoices.find((i) => i.id === attachInvoiceId);
+            return (
+              <SectionCard
+                title={`Attachments — Invoice ${inv ? formatCurrency(inv.amount) : attachInvoiceId}`}
+                className="mt-6"
+              >
+                <AttachmentsPanel entityPath={`invoices/${attachInvoiceId}`} />
+              </SectionCard>
+            );
+          })()}
         </main>
       </div>
     </ProtectedRoute>
