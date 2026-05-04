@@ -17,6 +17,7 @@ import { useAuth } from '@/lib/auth';
 import { formatDate } from '@/lib/utils';
 
 const WARN_DAYS = 30;
+const ADMIN_EMAIL = 'gudexpressllc@gmail.com';
 
 function expiryStatus(expiresAt) {
   if (!expiresAt) return null;
@@ -301,13 +302,15 @@ export default function DocumentPanel({ label, docType, entityPath }) {
                     >
                       View
                     </a>
-                    <button
-                      onClick={() => handleDelete(document)}
-                      className="text-red-600 hover:underline focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1 rounded"
-                      aria-label={`Delete ${document.fileName}`}
-                    >
-                      Delete
-                    </button>
+                    {user?.email === ADMIN_EMAIL && (
+                      <button
+                        onClick={() => handleDelete(document)}
+                        className="text-red-600 hover:underline focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1 rounded"
+                        aria-label={`Delete ${document.fileName}`}
+                      >
+                        Delete
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))}
