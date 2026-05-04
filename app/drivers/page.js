@@ -8,7 +8,7 @@ import SectionCard from '@/components/SectionCard';
 import DocumentPanel from '@/components/DocumentPanel';
 import { getDrivers, createDriver, updateDriver, deleteDriver } from '@/lib/firestore';
 import { DRIVER_STATUS } from '@/lib/constants';
-import { titleCase, statusBadgeClass } from '@/lib/utils';
+import { titleCase, statusBadgeClass, formatFirestoreError } from '@/lib/utils';
 import { exportDriversCsv } from '@/lib/exportCsv';
 
 const EMPTY_FORM = { name: '', licenseNumber: '', phone: '', status: DRIVER_STATUS.ACTIVE };
@@ -68,6 +68,7 @@ export default function DriversPage() {
 
   async function handleSubmit(e) {
     e.preventDefault();
+    if (saving) return;
     if (!form.name.trim()) {
       setFormError('Full Name is required.');
       return;
@@ -88,14 +89,7 @@ export default function DriversPage() {
       setForm(EMPTY_FORM);
       await load();
     } catch (err) {
-      const code = err?.code;
-      const msg =
-        code === 'permission-denied'
-          ? 'Permission denied. Check that Firestore rules allow authenticated writes.'
-          : err?.message?.includes('not configured')
-          ? err.message
-          : 'Failed to save driver. Please try again.';
-      setFormError(msg);
+      setFormError(formatFirestoreError(err, 'Failed to save driver. Please try again.'));
       console.error('[GUD-RMIS] Driver save error:', err);
     } finally {
       setSaving(false);

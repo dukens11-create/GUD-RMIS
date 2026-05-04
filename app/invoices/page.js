@@ -9,7 +9,7 @@ import AttachmentsPanel from '@/components/AttachmentsPanel';
 import { getInvoices, createInvoice, updateInvoice, deleteInvoice } from '@/lib/firestore';
 import { getLoads } from '@/lib/firestore';
 import { INVOICE_STATUS } from '@/lib/constants';
-import { titleCase, statusBadgeClass, formatCurrency, formatDate } from '@/lib/utils';
+import { titleCase, statusBadgeClass, formatCurrency, formatDate, formatFirestoreError } from '@/lib/utils';
 import { exportToCsv } from '@/lib/exportCsv';
 
 const EMPTY_FORM = {
@@ -71,6 +71,7 @@ export default function InvoicesPage() {
 
   async function handleSubmit(e) {
     e.preventDefault();
+    if (saving) return;
     setSaving(true);
     setFormError('');
     try {
@@ -84,14 +85,7 @@ export default function InvoicesPage() {
       setForm(EMPTY_FORM);
       await load();
     } catch (err) {
-      const code = err?.code;
-      const msg =
-        code === 'permission-denied'
-          ? 'Permission denied. Check that Firestore rules allow authenticated writes.'
-          : err?.message?.includes('not configured')
-          ? err.message
-          : 'Failed to save invoice. Please try again.';
-      setFormError(msg);
+      setFormError(formatFirestoreError(err, 'Failed to save invoice. Please try again.'));
       console.error('[GUD-RMIS] Invoice save error:', err);
     } finally {
       setSaving(false);
