@@ -7,6 +7,10 @@ service firebase.storage {
       return request.auth != null;
     }
 
+    function isAdmin() {
+      return request.auth != null && request.auth.token.admin == true;
+    }
+
     function isWithinSizeLimit() {
       return request.resource.size < 20 * 1024 * 1024; // 20 MB max
     }
@@ -40,34 +44,38 @@ service firebase.storage {
 
     // ── Load attachments ──────────────────────────────────────────────────────
     // Path: loads/{loadId}/attachments/{filename}
+    // Any authenticated user may upload; only admins may delete.
     match /loads/{loadId}/attachments/{filename} {
       allow read:   if isAuthenticated();
       allow write:  if isAuthenticated() && isValidUpload();
-      allow delete: if isAuthenticated();
+      allow delete: if isAdmin();
     }
 
     // ── Invoice attachments ───────────────────────────────────────────────────
     // Path: invoices/{invoiceId}/attachments/{filename}
+    // Any authenticated user may upload; only admins may delete.
     match /invoices/{invoiceId}/attachments/{filename} {
       allow read:   if isAuthenticated();
       allow write:  if isAuthenticated() && isValidUpload();
-      allow delete: if isAuthenticated();
+      allow delete: if isAdmin();
     }
 
     // ── Incident attachments ──────────────────────────────────────────────────
     // Path: incidents/{incidentId}/attachments/{filename}
+    // Any authenticated user may upload; only admins may delete.
     match /incidents/{incidentId}/attachments/{filename} {
       allow read:   if isAuthenticated();
       allow write:  if isAuthenticated() && isValidUpload();
-      allow delete: if isAuthenticated();
+      allow delete: if isAdmin();
     }
 
     // ── Tracking attachments ──────────────────────────────────────────────────
     // Path: tracking/{trackingId}/attachments/{filename}
+    // Any authenticated user may upload; only admins may delete.
     match /tracking/{trackingId}/attachments/{filename} {
       allow read:   if isAuthenticated();
       allow write:  if isAuthenticated() && isValidUpload();
-      allow delete: if isAuthenticated();
+      allow delete: if isAdmin();
     }
 
     // ── Deny everything else ─────────────────────────────────────────────────
