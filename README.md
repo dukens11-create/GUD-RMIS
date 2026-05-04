@@ -51,9 +51,10 @@ Edit `.env.local` with your Firebase project credentials:
 NEXT_PUBLIC_FIREBASE_API_KEY=your_api_key
 NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
 NEXT_PUBLIC_FIREBASE_PROJECT_ID=your_project_id
-NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your_project.appspot.com
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your_project.firebasestorage.app
 NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
 NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
+NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=your_measurement_id  # optional
 ```
 
 > **Security:** `.env.local` is gitignored and must never be committed to source control.
@@ -173,21 +174,23 @@ In production, fetch the active load's waypoints from Firestore and pass them in
 3. Use the following settings:
    - **Build Command:** `npm install; npm run build`
    - **Publish Directory:** `dist`
-4. Add all `NEXT_PUBLIC_FIREBASE_*` environment variables in the Render dashboard under **Environment**.
+4. In the Render **Environment** tab, add each of the following environment variables with the values from your Firebase project's SDK config (*Project settings → General → Your apps → SDK setup and configuration → Config*):
+
+   | Variable | Value source |
+   |---|---|
+   | `NEXT_PUBLIC_FIREBASE_API_KEY` | `apiKey` |
+   | `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN` | `authDomain` |
+   | `NEXT_PUBLIC_FIREBASE_PROJECT_ID` | `projectId` |
+   | `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET` | `storageBucket` |
+   | `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID` | `messagingSenderId` |
+   | `NEXT_PUBLIC_FIREBASE_APP_ID` | `appId` |
+   | `NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID` | `measurementId` *(optional — Analytics only)* |
+
 5. Click **Deploy**.
 
-> **Limitations:** This project uses `output: 'export'` in `next.config.js` to generate a fully static site. This means:
-> - **Server-side rendering (SSR) is disabled** — all pages are pre-rendered at build time as static HTML.
-> - **API routes have been removed** — `/api/*` endpoints cannot run on static hosting. All data operations use the Firebase SDK from the browser via `lib/firestore.js`.
-> - **Client-side routing** — the root `/` page uses a JavaScript redirect to `/dashboard`.
+> **Why you must redeploy after changing env vars:** This project uses `output: 'export'`. Next.js embeds `NEXT_PUBLIC_*` values **at build time** — the browser cannot read them from the server at runtime. Adding or changing variables in Render's Environment tab only takes effect after a new build and deploy.
 >
-> **Critical:** `NEXT_PUBLIC_FIREBASE_*` environment variables **must be set in Render's Environment settings before your first deploy** (or before triggering a redeploy after changing them). Next.js embeds these values at build time. If they are missing the app will show a "Configuration Error" banner rather than a blank crash screen — add the variables and redeploy.
->
-> **Troubleshooting: "Application error: a client-side exception has occurred"**
-> The most common causes on static hosting:
-> 1. **Missing Firebase env vars** — set all `NEXT_PUBLIC_FIREBASE_*` variables in Render → Environment and trigger a new deploy.
-> 2. **Server-side redirect** — using `redirect()` from `next/navigation` in a Server Component generates `id="__next_error__"` HTML. The root page already uses `useRouter().replace()` instead.
-> 3. **API routes called from client code** — `/api/*` routes don't exist on static hosting. Use Firebase SDK directly.
+> **Missing variables?** If any required variable is absent when the build runs, the deployed app will show a "Configuration Error" page that **lists each missing variable by name** instead of crashing with a blank screen. Add the missing variables in Render → Environment and trigger a new deploy to fix it.
 
 ### Docker
 
