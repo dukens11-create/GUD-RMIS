@@ -99,10 +99,18 @@ export default function IncidentsPage() {
         await createIncident(payload);
       }
       setShowForm(false);
+      setForm(EMPTY_FORM);
       await load();
     } catch (err) {
-      setFormError('Failed to save incident. Please try again.');
-      console.error('Incident save error:', err.message);
+      const code = err?.code;
+      const msg =
+        code === 'permission-denied'
+          ? 'Permission denied. Check that Firestore rules allow authenticated writes.'
+          : err?.message?.includes('not configured')
+          ? err.message
+          : 'Failed to save incident. Please try again.';
+      setFormError(msg);
+      console.error('[GUD-RMIS] Incident save error:', err);
     } finally {
       setSaving(false);
     }

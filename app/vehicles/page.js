@@ -90,10 +90,18 @@ export default function VehiclesPage() {
         await createVehicle(form);
       }
       setShowForm(false);
+      setForm(EMPTY_FORM);
       await load();
     } catch (err) {
-      setFormError('Failed to save vehicle. Please try again.');
-      console.error('Vehicle save error:', err.message);
+      const code = err?.code;
+      const msg =
+        code === 'permission-denied'
+          ? 'Permission denied. Check that Firestore rules allow authenticated writes.'
+          : err?.message?.includes('not configured')
+          ? err.message
+          : 'Failed to save vehicle. Please try again.';
+      setFormError(msg);
+      console.error('[GUD-RMIS] Vehicle save error:', err);
     } finally {
       setSaving(false);
     }

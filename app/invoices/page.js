@@ -81,10 +81,18 @@ export default function InvoicesPage() {
         await createInvoice(payload);
       }
       setShowForm(false);
+      setForm(EMPTY_FORM);
       await load();
     } catch (err) {
-      setFormError('Failed to save invoice. Please try again.');
-      console.error('Invoice save error:', err.message);
+      const code = err?.code;
+      const msg =
+        code === 'permission-denied'
+          ? 'Permission denied. Check that Firestore rules allow authenticated writes.'
+          : err?.message?.includes('not configured')
+          ? err.message
+          : 'Failed to save invoice. Please try again.';
+      setFormError(msg);
+      console.error('[GUD-RMIS] Invoice save error:', err);
     } finally {
       setSaving(false);
     }

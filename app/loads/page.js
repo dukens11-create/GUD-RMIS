@@ -80,10 +80,18 @@ export default function LoadsPage() {
         await createLoad(form);
       }
       setShowForm(false);
+      setForm(EMPTY_FORM);
       await load();
     } catch (err) {
-      setFormError('Failed to save load. Please try again.');
-      console.error('Load save error:', err.message);
+      const code = err?.code;
+      const msg =
+        code === 'permission-denied'
+          ? 'Permission denied. Check that Firestore rules allow authenticated writes.'
+          : err?.message?.includes('not configured')
+          ? err.message
+          : 'Failed to save load. Please try again.';
+      setFormError(msg);
+      console.error('[GUD-RMIS] Load save error:', err);
     } finally {
       setSaving(false);
     }

@@ -68,6 +68,14 @@ export default function DriversPage() {
 
   async function handleSubmit(e) {
     e.preventDefault();
+    if (!form.name.trim()) {
+      setFormError('Full Name is required.');
+      return;
+    }
+    if (!form.licenseNumber.trim()) {
+      setFormError('License Number is required.');
+      return;
+    }
     setSaving(true);
     setFormError('');
     try {
@@ -77,10 +85,18 @@ export default function DriversPage() {
         await createDriver(form);
       }
       setShowForm(false);
+      setForm(EMPTY_FORM);
       await load();
     } catch (err) {
-      setFormError('Failed to save driver. Please try again.');
-      console.error('Driver save error:', err.message);
+      const code = err?.code;
+      const msg =
+        code === 'permission-denied'
+          ? 'Permission denied. Check that Firestore rules allow authenticated writes.'
+          : err?.message?.includes('not configured')
+          ? err.message
+          : 'Failed to save driver. Please try again.';
+      setFormError(msg);
+      console.error('[GUD-RMIS] Driver save error:', err);
     } finally {
       setSaving(false);
     }
