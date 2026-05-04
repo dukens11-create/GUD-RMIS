@@ -191,6 +191,12 @@ In production, fetch the active load's waypoints from Firestore and pass them in
 > **Why you must redeploy after changing env vars:** This project uses `output: 'export'`. Next.js embeds `NEXT_PUBLIC_*` values **at build time** — the browser cannot read them from the server at runtime. Adding or changing variables in Render's Environment tab only takes effect after a new build and deploy.
 >
 > **Missing variables?** If any required variable is absent when the build runs, the deployed app will show a "Configuration Error" page that **lists each missing variable by name** instead of crashing with a blank screen. Add the missing variables in Render → Environment and trigger a new deploy to fix it.
+>
+> **Troubleshooting: "Application error: a client-side exception has occurred"**
+> The most common causes on static hosting:
+> 1. **Missing Firebase env vars** — set all `NEXT_PUBLIC_FIREBASE_*` variables in Render → Environment and trigger a new deploy.
+> 2. **Server-side redirect** — using `redirect()` from `next/navigation` in a Server Component generates `id="__next_error__"` HTML. The root page already uses `useRouter().replace()` instead.
+> 3. **API routes called from client code** — `/api/*` routes don't exist on static hosting. Use Firebase SDK directly.
 
 ### Docker
 
