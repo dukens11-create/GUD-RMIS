@@ -8,12 +8,13 @@
 - 🚗 **Drivers** — create, edit, and track driver roster with status badges; CSV export; document management (Driver's License, Medical Card, Drug Tests)
 - 🚛 **Vehicles** — full fleet management (VIN, make/model, insurance & registration expiry); CSV export; document management (Truck Registration, DOT Inspection)
 - 📄 **Document Management** — upload, view, download and delete documents per driver and vehicle; expiration tracking with visual Valid / Expiring Soon / Expired status badges
-- 📦 **Loads** — manage shipments with origin, destination, driver assignment, and status; CSV export
-- 🧾 **Invoices** — billing management with amount tracking and payment status; CSV export
-- 🚨 **Incidents** — report and track accidents, violations, and risk events with severity levels; CSV export
+- 📎 **Attachments** — generic file attachment support for Loads, Invoices, Incidents, and Tracking; any authenticated user can upload; admin-only delete
+- 📦 **Loads** — manage shipments with origin, destination, driver assignment, and status; CSV export; per-load attachments
+- 🧾 **Invoices** — billing management with amount tracking and payment status; CSV export; per-invoice attachments
+- 🚨 **Incidents** — report and track accidents, violations, and risk events with severity levels; CSV export; per-incident attachments
 - 📋 **Task Board** — Kanban-style task management (To Do / In Progress / Done)
 - 📊 **Dashboard** — overview stats and task board at a glance
-- 📍 **Live Tracking** — real-time GPS truck tracking on an interactive map (Leaflet + OpenStreetMap) with smooth marker animation, snap-to-route, camera follow, and dev-console GPS logging
+- 📍 **Live Tracking** — real-time GPS truck tracking on an interactive map (Leaflet + OpenStreetMap) with smooth marker animation, snap-to-route, camera follow, and dev-console GPS logging; tracking session attachments
 - 🔒 **Firestore Security Rules** — least-privilege, per-collection rules with admin-role enforcement
 
 ## Tech Stack
@@ -243,11 +244,37 @@ docker run -p 3000:3000 --env-file .env.local gud-rmis
 
 The `firestore.rules` file implements least-privilege rules:
 
-- **All authenticated users** can read drivers, vehicles, loads, incidents, invoices, and tasks.
-- **Admins only** (custom claim `admin: true`) can create/update/delete drivers and vehicles, and delete loads, invoices, incidents, and tasks.
-- **Any authenticated user** can create loads, invoices, incidents, and tasks.
-- **Document subcollections** (`drivers/{id}/documents` and `vehicles/{id}/documents`) allow any authenticated user to read, create, update, and delete document metadata records.
+- **All authenticated users** can read drivers, vehicles, loads, incidents, invoices, tasks, and tracking records.
+- **Admins only** (custom claim `admin: true`) can create/update/delete drivers and vehicles, and delete loads, invoices, incidents, tasks, and tracking records.
+- **Any authenticated user** can create loads, invoices, incidents, tasks, and tracking records.
+- **Document subcollections** (`drivers/{id}/documents` and `vehicles/{id}/documents`) allow any authenticated user to read, create, and update document metadata; delete is open to any authenticated user.
+- **Attachment subcollections** (`loads/{id}/attachments`, `invoices/{id}/attachments`, `incidents/{id}/attachments`, `tracking/{id}/attachments`) allow any authenticated user to read and create; delete is restricted to admins.
 - All other paths are **denied by default**.
+
+### Required Firestore Collections
+
+The following top-level collections must exist (or will be created automatically on first write):
+
+| Collection | Purpose | Key fields |
+|---|---|---|
+| `drivers` | Driver roster | `name`, `licenseNumber`, `phone`, `status` |
+| `vehicles` | Fleet vehicles | `make`, `model`, `year`, `licensePlate`, `vin` |
+| `loads` | Shipments | `origin`, `destination`, `driverId`, `status`, `scheduledDate` |
+| `invoices` | Billing records | `loadId`, `amount`, `dueDate`, `status`, `notes` |
+| `incidents` | Risk events | `date`, `type`, `severity`, `status`, `driverId`, `vehicleId` |
+| `tasks` | Task board items | `title`, `status`, `assigneeId` |
+| `tracking` | Tracking sessions | `title`, `createdAt` |
+
+### Attachment subcollections (auto-created on first upload)
+
+| Path | Purpose |
+|---|---|
+| `drivers/{id}/documents/{docId}` | Per-type compliance docs (license, medical, etc.) |
+| `vehicles/{id}/documents/{docId}` | Per-type compliance docs (registration, inspection) |
+| `loads/{id}/attachments/{attachmentId}` | Generic load attachments |
+| `invoices/{id}/attachments/{attachmentId}` | Generic invoice attachments |
+| `incidents/{id}/attachments/{attachmentId}` | Generic incident attachments |
+| `tracking/{id}/attachments/{attachmentId}` | Generic tracking session attachments |
 
 To grant admin access to a user, set the custom claim via Firebase Admin SDK:
 ```js
@@ -259,8 +286,31 @@ admin.auth().setCustomUserClaims(uid, { admin: true });
 The `storage.rules` file restricts access:
 
 - Only authenticated users can read, upload, or delete files under `drivers/` and `vehicles/` paths.
+- Only authenticated users can read, upload, or delete attachments under `loads/`, `invoices/`, `incidents/`, and `tracking/` paths.
 - Uploads are limited to **20 MB** and must be PDF, image, or Word document MIME types.
 - All other storage paths are **denied by default**.
+
+### Storage paths
+
+| Path | Purpose |
+|---|---|
+| `drivers/{id}/{docType}/{filename}` | Driver compliance docs |
+| `vehicles/{id}/{docType}/{filename}` | Vehicle compliance docs |
+| `loads/{id}/attachments/{filename}` | Load attachments |
+| `invoices/{id}/attachments/{filename}` | Invoice attachments |
+| `incidents/{id}/attachments/{filename}` | Incident attachments |
+| `tracking/{id}/attachments/{filename}` | Tracking session attachments |
+
+### Enabling Firebase Storage
+
+1. Open **Firebase Console** → your project → **Storage**
+2. Click **Get started** and follow the setup wizard
+3. Choose a storage location (e.g. `us-central1`)
+4. After setup, deploy the storage rules:
+
+```bash
+firebase deploy --only storage
+```
 
 Deploy with:
 ```bash

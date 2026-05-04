@@ -6,7 +6,12 @@ import Navbar from '@/components/Navbar';
 import PageHeader from '@/components/PageHeader';
 import SectionCard from '@/components/SectionCard';
 import DocumentPanel from '@/components/DocumentPanel';
-import { getDrivers, getVehicles } from '@/lib/firestore';
+import AttachmentsPanel from '@/components/AttachmentsPanel';
+import { getDrivers, getVehicles, getLoads, getInvoices, getIncidents } from '@/lib/firestore';
+import { db } from '@/lib/firebase';
+import { COLLECTIONS } from '@/lib/constants';
+import { collection, getDocs, orderBy, query } from 'firebase/firestore';
+import { formatCurrency } from '@/lib/utils';
 
 const DRIVER_DOC_TYPES = [
   { docType: 'drivers_license', label: "Driver's License" },
@@ -27,22 +32,71 @@ function formatVehicleName(vehicle) {
   return `${base}${year}${plate}` || vehicle.id;
 }
 
+function formatLoadLabel(load) {
+  if (load.origin && load.destination) return `${load.origin} → ${load.destination}`;
+  return load.id;
+}
+
+function formatInvoiceLabel(inv) {
+  const amount = inv.amount != null ? formatCurrency(inv.amount) : '';
+  const status = inv.status ? ` (${inv.status})` : '';
+  return amount ? `${amount}${status}` : inv.id;
+}
+
+function formatIncidentLabel(inc) {
+  const type = inc.type || 'Incident';
+  const date = inc.date ? ` — ${inc.date}` : '';
+  return `${type}${date}`;
+}
+
 export default function DocumentsPage() {
   const [drivers, setDrivers] = useState([]);
   const [vehicles, setVehicles] = useState([]);
+  const [loads, setLoads] = useState([]);
+  const [invoices, setInvoices] = useState([]);
+  const [incidents, setIncidents] = useState([]);
+  const [trackingRecords, setTrackingRecords] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [openDriverId, setOpenDriverId] = useState(null);
   const [openVehicleId, setOpenVehicleId] = useState(null);
+  const [openLoadId, setOpenLoadId] = useState(null);
+  const [openInvoiceId, setOpenInvoiceId] = useState(null);
+  const [openIncidentId, setOpenIncidentId] = useState(null);
+  const [openTrackingId, setOpenTrackingId] = useState(null);
 
   useEffect(() => {
     async function load() {
       setLoading(true);
       setError('');
       try {
-        const [driverData, vehicleData] = await Promise.all([getDrivers(), getVehicles()]);
+        const dbInst = db();
+        let trackingData = [];
+        if (dbInst) {
+          try {
+            const q = query(
+              collection(dbInst, COLLECTIONS.TRACKING),
+              orderBy('createdAt', 'desc')
+            );
+            const snap = await getDocs(q);
+            trackingData = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+          } catch {
+            // tracking collection may not exist yet
+          }
+        }
+        const [driverData, vehicleData, loadData, invoiceData, incidentData] = await Promise.all([
+          getDrivers(),
+          getVehicles(),
+          getLoads(),
+          getInvoices(),
+          getIncidents(),
+        ]);
         setDrivers(driverData);
         setVehicles(vehicleData);
+        setLoads(loadData);
+        setInvoices(invoiceData);
+        setIncidents(incidentData);
+        setTrackingRecords(trackingData);
       } catch (err) {
         setError('Failed to load data. Please try again.');
         console.error('Documents page load error:', err.message);
@@ -60,7 +114,7 @@ export default function DocumentsPage() {
         <main className="mx-auto max-w-7xl px-4 py-8">
           <PageHeader
             title="Documents"
-            subtitle="Manage compliance documents for drivers and vehicles"
+            subtitle="Manage compliance documents and attachments for all modules"
           />
 
           {error && (
@@ -75,9 +129,9 @@ export default function DocumentsPage() {
               Loading…
             </div>
           ) : (
-            <>
+            <div className="space-y-6">
               {/* Driver Documents */}
-              <SectionCard title="Driver Documents" className="mb-6">
+              <SectionCard title="Driver Documents">
                 {drivers.length === 0 ? (
                   <p className="text-sm text-gray-500">No drivers found. Add drivers first.</p>
                 ) : (
@@ -151,7 +205,126 @@ export default function DocumentsPage() {
                   </div>
                 )}
               </SectionCard>
-            </>
+
+              {/* Load Attachments */}
+              <SectionCard title="Load Attachments">
+                {loads.length === 0 ? (
+                  <p className="text-sm text-gray-500">No loads found. Add loads first.</p>
+                ) : (
+                  <div className="space-y-4">
+                    {loads.map((load) => (
+                      <div key={load.id} className="rounded-lg border border-gray-200 bg-white">
+                        <button
+                          onClick={() => setOpenLoadId(openLoadId === load.id ? null : load.id)}
+                          className="flex w-full items-center justify-between px-4 py-3 text-left text-sm font-semibold text-gray-800 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500 rounded-lg"
+                          aria-expanded={openLoadId === load.id}
+                        >
+                          <span>{formatLoadLabel(load)}</span>
+                          <span className="text-gray-400 text-xs">
+                            {openLoadId === load.id ? '▲ Hide' : '▼ Show Attachments'}
+                          </span>
+                        </button>
+                        {openLoadId === load.id && (
+                          <div className="border-t border-gray-100 p-4">
+                            <AttachmentsPanel entityPath={`loads/${load.id}`} />
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </SectionCard>
+
+              {/* Invoice Attachments */}
+              <SectionCard title="Invoice Attachments">
+                {invoices.length === 0 ? (
+                  <p className="text-sm text-gray-500">No invoices found. Add invoices first.</p>
+                ) : (
+                  <div className="space-y-4">
+                    {invoices.map((inv) => (
+                      <div key={inv.id} className="rounded-lg border border-gray-200 bg-white">
+                        <button
+                          onClick={() => setOpenInvoiceId(openInvoiceId === inv.id ? null : inv.id)}
+                          className="flex w-full items-center justify-between px-4 py-3 text-left text-sm font-semibold text-gray-800 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500 rounded-lg"
+                          aria-expanded={openInvoiceId === inv.id}
+                        >
+                          <span>{formatInvoiceLabel(inv)}</span>
+                          <span className="text-gray-400 text-xs">
+                            {openInvoiceId === inv.id ? '▲ Hide' : '▼ Show Attachments'}
+                          </span>
+                        </button>
+                        {openInvoiceId === inv.id && (
+                          <div className="border-t border-gray-100 p-4">
+                            <AttachmentsPanel entityPath={`invoices/${inv.id}`} />
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </SectionCard>
+
+              {/* Incident Attachments */}
+              <SectionCard title="Incident Attachments">
+                {incidents.length === 0 ? (
+                  <p className="text-sm text-gray-500">No incidents found. Report incidents first.</p>
+                ) : (
+                  <div className="space-y-4">
+                    {incidents.map((inc) => (
+                      <div key={inc.id} className="rounded-lg border border-gray-200 bg-white">
+                        <button
+                          onClick={() => setOpenIncidentId(openIncidentId === inc.id ? null : inc.id)}
+                          className="flex w-full items-center justify-between px-4 py-3 text-left text-sm font-semibold text-gray-800 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500 rounded-lg"
+                          aria-expanded={openIncidentId === inc.id}
+                        >
+                          <span>{formatIncidentLabel(inc)}</span>
+                          <span className="text-gray-400 text-xs">
+                            {openIncidentId === inc.id ? '▲ Hide' : '▼ Show Attachments'}
+                          </span>
+                        </button>
+                        {openIncidentId === inc.id && (
+                          <div className="border-t border-gray-100 p-4">
+                            <AttachmentsPanel entityPath={`incidents/${inc.id}`} />
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </SectionCard>
+
+              {/* Tracking Attachments */}
+              <SectionCard title="Tracking Attachments">
+                {trackingRecords.length === 0 ? (
+                  <p className="text-sm text-gray-500">
+                    No tracking sessions found. Add tracking sessions on the{' '}
+                    <a href="/tracking" className="text-blue-600 hover:underline">Tracking page</a>.
+                  </p>
+                ) : (
+                  <div className="space-y-4">
+                    {trackingRecords.map((record) => (
+                      <div key={record.id} className="rounded-lg border border-gray-200 bg-white">
+                        <button
+                          onClick={() => setOpenTrackingId(openTrackingId === record.id ? null : record.id)}
+                          className="flex w-full items-center justify-between px-4 py-3 text-left text-sm font-semibold text-gray-800 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500 rounded-lg"
+                          aria-expanded={openTrackingId === record.id}
+                        >
+                          <span>{record.title || record.id}</span>
+                          <span className="text-gray-400 text-xs">
+                            {openTrackingId === record.id ? '▲ Hide' : '▼ Show Attachments'}
+                          </span>
+                        </button>
+                        {openTrackingId === record.id && (
+                          <div className="border-t border-gray-100 p-4">
+                            <AttachmentsPanel entityPath={`tracking/${record.id}`} />
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </SectionCard>
+            </div>
           )}
         </main>
       </div>

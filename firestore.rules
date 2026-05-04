@@ -65,6 +65,14 @@ service cloud.firestore {
       allow create: if isAuthenticated();
       allow update: if isAuthenticated() && doesNotAlterCreatedAt();
       allow delete: if isAuthenticated() && isAdmin();
+
+      // Load attachment metadata subcollection
+      match /attachments/{attachmentId} {
+        allow read: if isAuthenticated();
+        allow create: if isAuthenticated();
+        allow update: if isAuthenticated();
+        allow delete: if isAuthenticated() && isAdmin();
+      }
     }
 
     // ── Invoices ─────────────────────────────────────────────────────────────
@@ -73,6 +81,14 @@ service cloud.firestore {
       allow create: if isAuthenticated();
       allow update: if isAuthenticated() && doesNotAlterCreatedAt();
       allow delete: if isAuthenticated() && isAdmin();
+
+      // Invoice attachment metadata subcollection
+      match /attachments/{attachmentId} {
+        allow read: if isAuthenticated();
+        allow create: if isAuthenticated();
+        allow update: if isAuthenticated();
+        allow delete: if isAuthenticated() && isAdmin();
+      }
     }
 
     // ── Incidents ────────────────────────────────────────────────────────────
@@ -83,6 +99,30 @@ service cloud.firestore {
       allow create: if isAuthenticated();
       allow update: if isAuthenticated() && doesNotAlterCreatedAt();
       allow delete: if isAuthenticated() && isAdmin();
+
+      // Incident attachment metadata subcollection
+      match /attachments/{attachmentId} {
+        allow read: if isAuthenticated();
+        allow create: if isAuthenticated();
+        allow update: if isAuthenticated();
+        allow delete: if isAuthenticated() && isAdmin();
+      }
+    }
+
+    // ── Tracking ─────────────────────────────────────────────────────────────
+    match /tracking/{trackingId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() && doesNotAlterCreatedAt();
+      allow delete: if isAuthenticated() && isAdmin();
+
+      // Tracking attachment metadata subcollection
+      match /attachments/{attachmentId} {
+        allow read: if isAuthenticated();
+        allow create: if isAuthenticated();
+        allow update: if isAuthenticated();
+        allow delete: if isAuthenticated() && isAdmin();
+      }
     }
 
     // ── Tasks ─────────────────────────────────────────────────────────────────

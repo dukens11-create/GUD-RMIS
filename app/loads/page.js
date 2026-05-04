@@ -5,6 +5,7 @@ import ProtectedRoute from '@/components/ProtectedRoute';
 import Navbar from '@/components/Navbar';
 import PageHeader from '@/components/PageHeader';
 import SectionCard from '@/components/SectionCard';
+import AttachmentsPanel from '@/components/AttachmentsPanel';
 import { getLoads, createLoad, updateLoad, deleteLoad } from '@/lib/firestore';
 import { getDrivers } from '@/lib/firestore';
 import { LOAD_STATUS } from '@/lib/constants';
@@ -29,6 +30,7 @@ export default function LoadsPage() {
   const [editId, setEditId] = useState(null);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
+  const [attachLoadId, setAttachLoadId] = useState(null);
 
   async function load() {
     setLoading(true);
@@ -280,6 +282,14 @@ export default function LoadsPage() {
                             Edit
                           </button>
                           <button
+                            onClick={() => setAttachLoadId(attachLoadId === l.id ? null : l.id)}
+                            className="mr-3 text-gray-600 hover:underline focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-1 rounded"
+                            aria-label={`${attachLoadId === l.id ? 'Hide' : 'Show'} attachments for load ${l.origin} to ${l.destination}`}
+                            aria-expanded={attachLoadId === l.id}
+                          >
+                            {attachLoadId === l.id ? 'Hide Attachments' : 'Attachments'}
+                          </button>
+                          <button
                             onClick={() => handleDelete(l.id)}
                             className="text-red-600 hover:underline focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1 rounded"
                             aria-label={`Delete load from ${l.origin} to ${l.destination}`}
@@ -294,6 +304,19 @@ export default function LoadsPage() {
               </div>
             )}
           </SectionCard>
+
+          {/* Attachments section — shown when a load row's Attachments button is active */}
+          {attachLoadId && (() => {
+            const load = loads.find((l) => l.id === attachLoadId);
+            return (
+              <SectionCard
+                title={`Attachments — ${load ? `${load.origin} → ${load.destination}` : attachLoadId}`}
+                className="mt-6"
+              >
+                <AttachmentsPanel entityPath={`loads/${attachLoadId}`} />
+              </SectionCard>
+            );
+          })()}
         </main>
       </div>
     </ProtectedRoute>
