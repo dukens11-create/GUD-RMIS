@@ -69,6 +69,7 @@ export default function DriversPage() {
   async function handleSubmit(e) {
     e.preventDefault();
     if (saving) return;
+    setFormError('');
     if (!form.name.trim()) {
       setFormError('Full Name is required.');
       return;
@@ -78,7 +79,6 @@ export default function DriversPage() {
       return;
     }
     setSaving(true);
-    setFormError('');
     try {
       if (editId) {
         await updateDriver(editId, form);
