@@ -10,7 +10,7 @@ import { getIncidents, createIncident, updateIncident, deleteIncident } from '@/
 import { getDrivers } from '@/lib/firestore';
 import { getVehicles } from '@/lib/firestore';
 import { INCIDENT_SEVERITY, INCIDENT_STATUS } from '@/lib/constants';
-import { titleCase, statusBadgeClass, formatDate } from '@/lib/utils';
+import { titleCase, statusBadgeClass, formatDate, formatFirestoreError } from '@/lib/utils';
 import { exportIncidentsCsv } from '@/lib/exportCsv';
 
 const EMPTY_FORM = {
@@ -86,6 +86,7 @@ export default function IncidentsPage() {
 
   async function handleSubmit(e) {
     e.preventDefault();
+    if (saving) return;
     setSaving(true);
     setFormError('');
     try {
@@ -99,10 +100,11 @@ export default function IncidentsPage() {
         await createIncident(payload);
       }
       setShowForm(false);
+      setForm(EMPTY_FORM);
       await load();
     } catch (err) {
-      setFormError('Failed to save incident. Please try again.');
-      console.error('Incident save error:', err.message);
+      setFormError(formatFirestoreError(err, 'Failed to save incident. Please try again.'));
+      console.error('[GUD-RMIS] Incident save error:', err);
     } finally {
       setSaving(false);
     }

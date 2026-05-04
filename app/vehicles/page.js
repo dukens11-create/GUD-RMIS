@@ -8,7 +8,7 @@ import SectionCard from '@/components/SectionCard';
 import DocumentPanel from '@/components/DocumentPanel';
 import { getVehicles, createVehicle, updateVehicle, deleteVehicle } from '@/lib/firestore';
 import { VEHICLE_STATUS } from '@/lib/constants';
-import { titleCase, statusBadgeClass } from '@/lib/utils';
+import { titleCase, statusBadgeClass, formatFirestoreError } from '@/lib/utils';
 import { exportVehiclesCsv } from '@/lib/exportCsv';
 
 const EMPTY_FORM = {
@@ -81,6 +81,7 @@ export default function VehiclesPage() {
 
   async function handleSubmit(e) {
     e.preventDefault();
+    if (saving) return;
     setSaving(true);
     setFormError('');
     try {
@@ -90,10 +91,11 @@ export default function VehiclesPage() {
         await createVehicle(form);
       }
       setShowForm(false);
+      setForm(EMPTY_FORM);
       await load();
     } catch (err) {
-      setFormError('Failed to save vehicle. Please try again.');
-      console.error('Vehicle save error:', err.message);
+      setFormError(formatFirestoreError(err, 'Failed to save vehicle. Please try again.'));
+      console.error('[GUD-RMIS] Vehicle save error:', err);
     } finally {
       setSaving(false);
     }

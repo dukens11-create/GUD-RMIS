@@ -9,7 +9,7 @@ import AttachmentsPanel from '@/components/AttachmentsPanel';
 import { getLoads, createLoad, updateLoad, deleteLoad } from '@/lib/firestore';
 import { getDrivers } from '@/lib/firestore';
 import { LOAD_STATUS } from '@/lib/constants';
-import { titleCase, statusBadgeClass, formatDate } from '@/lib/utils';
+import { titleCase, statusBadgeClass, formatDate, formatFirestoreError } from '@/lib/utils';
 import { exportLoadsCsv } from '@/lib/exportCsv';
 
 const EMPTY_FORM = {
@@ -71,6 +71,7 @@ export default function LoadsPage() {
 
   async function handleSubmit(e) {
     e.preventDefault();
+    if (saving) return;
     setSaving(true);
     setFormError('');
     try {
@@ -80,10 +81,11 @@ export default function LoadsPage() {
         await createLoad(form);
       }
       setShowForm(false);
+      setForm(EMPTY_FORM);
       await load();
     } catch (err) {
-      setFormError('Failed to save load. Please try again.');
-      console.error('Load save error:', err.message);
+      setFormError(formatFirestoreError(err, 'Failed to save load. Please try again.'));
+      console.error('[GUD-RMIS] Load save error:', err);
     } finally {
       setSaving(false);
     }
