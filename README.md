@@ -5,8 +5,9 @@
 ## Features
 
 - 🔐 **Firebase Authentication** — email/password login with protected routes
-- 🚗 **Drivers** — create, edit, and track driver roster with status badges; CSV export
-- 🚛 **Vehicles** — full fleet management (VIN, make/model, insurance & registration expiry); CSV export
+- 🚗 **Drivers** — create, edit, and track driver roster with status badges; CSV export; document management (Driver's License, Medical Card, Drug Tests)
+- 🚛 **Vehicles** — full fleet management (VIN, make/model, insurance & registration expiry); CSV export; document management (Truck Registration, DOT Inspection)
+- 📄 **Document Management** — upload, view, download and delete documents per driver and vehicle; expiration tracking with visual Valid / Expiring Soon / Expired status badges
 - 📦 **Loads** — manage shipments with origin, destination, driver assignment, and status; CSV export
 - 🧾 **Invoices** — billing management with amount tracking and payment status; CSV export
 - 🚨 **Incidents** — report and track accidents, violations, and risk events with severity levels; CSV export
@@ -20,7 +21,7 @@
 | Layer | Technology |
 |---|---|
 | Framework | Next.js 15 (App Router) |
-| Auth & Database | Firebase Auth + Firestore |
+| Auth & Database | Firebase Auth + Firestore + Storage |
 | Styling | Tailwind CSS 3 |
 | Language | JavaScript (ES Modules) |
 | Testing | Jest |
@@ -31,7 +32,7 @@
 ### 1. Prerequisites
 
 - Node.js 20+
-- A Firebase project with **Firestore** and **Authentication** (email/password) enabled
+- A Firebase project with **Firestore**, **Authentication** (email/password), and **Storage** enabled
 
 ### 2. Install dependencies
 
@@ -73,6 +74,17 @@ Open [http://localhost:3000](http://localhost:3000) — you will be redirected t
 firebase deploy --only firestore:rules
 ```
 
+### 6. Enable Firebase Storage and deploy Storage rules
+
+1. In the [Firebase Console](https://console.firebase.google.com/), go to **Build → Storage** and click **Get started** to enable it for your project (choose a region when prompted).
+2. Deploy the Storage security rules included in this repo:
+
+```bash
+firebase deploy --only storage
+```
+
+The `storage.rules` file restricts all reads and writes to authenticated users only, and limits uploads to **20 MB** with accepted MIME types (PDF, images, Word documents).
+
 ## Scripts
 
 | Command | Description |
@@ -112,14 +124,16 @@ firebase deploy --only firestore:rules
 ├── components/                # Reusable UI components
 │   └── LiveTracker.js         # Real-time GPS map component
 ├── lib/
-│   ├── firebase.js            # Firebase app initialisation
+│   ├── firebase.js            # Firebase app initialisation (Auth, Firestore, Storage)
 │   ├── auth.js                # Auth context & helpers
-│   ├── firestore.js           # Firestore CRUD helpers
+│   ├── firestore.js           # Firestore CRUD helpers + document subcollection helpers
+│   ├── storage.js             # Firebase Storage upload/delete helpers
 │   ├── constants.js           # Collection names, status values, nav links
 │   ├── exportCsv.js           # CSV export utilities
 │   ├── gps.js                 # GPS math utilities (distance, filtering, snap, interpolation)
 │   └── utils.js               # Formatting utilities
 ├── firestore.rules            # Least-privilege Firestore security rules
+├── storage.rules              # Least-privilege Firebase Storage security rules
 ├── jest.config.js             # Jest configuration
 ├── render.yaml                # Render.com deployment blueprint
 └── vercel.json                # Vercel deployment configuration
@@ -232,11 +246,25 @@ The `firestore.rules` file implements least-privilege rules:
 - **All authenticated users** can read drivers, vehicles, loads, incidents, invoices, and tasks.
 - **Admins only** (custom claim `admin: true`) can create/update/delete drivers and vehicles, and delete loads, invoices, incidents, and tasks.
 - **Any authenticated user** can create loads, invoices, incidents, and tasks.
+- **Document subcollections** (`drivers/{id}/documents` and `vehicles/{id}/documents`) allow any authenticated user to read, create, update, and delete document metadata records.
 - All other paths are **denied by default**.
 
 To grant admin access to a user, set the custom claim via Firebase Admin SDK:
 ```js
 admin.auth().setCustomUserClaims(uid, { admin: true });
+```
+
+## Firebase Storage Security Rules
+
+The `storage.rules` file restricts access:
+
+- Only authenticated users can read, upload, or delete files under `drivers/` and `vehicles/` paths.
+- Uploads are limited to **20 MB** and must be PDF, image, or Word document MIME types.
+- All other storage paths are **denied by default**.
+
+Deploy with:
+```bash
+firebase deploy --only storage
 ```
 
 ## CI/CD

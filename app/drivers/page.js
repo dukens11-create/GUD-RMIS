@@ -5,12 +5,20 @@ import ProtectedRoute from '@/components/ProtectedRoute';
 import Navbar from '@/components/Navbar';
 import PageHeader from '@/components/PageHeader';
 import SectionCard from '@/components/SectionCard';
+import DocumentPanel from '@/components/DocumentPanel';
 import { getDrivers, createDriver, updateDriver, deleteDriver } from '@/lib/firestore';
 import { DRIVER_STATUS } from '@/lib/constants';
 import { titleCase, statusBadgeClass } from '@/lib/utils';
 import { exportDriversCsv } from '@/lib/exportCsv';
 
 const EMPTY_FORM = { name: '', licenseNumber: '', phone: '', status: DRIVER_STATUS.ACTIVE };
+
+const DRIVER_DOC_TYPES = [
+  { docType: 'drivers_license', label: "Driver's License" },
+  { docType: 'medical_card', label: 'Medical Card' },
+  { docType: 'drug_test_new_hire', label: 'Drug Test – New Hire' },
+  { docType: 'drug_test_random', label: 'Drug Test – Random' },
+];
 
 export default function DriversPage() {
   const [drivers, setDrivers] = useState([]);
@@ -21,6 +29,7 @@ export default function DriversPage() {
   const [editId, setEditId] = useState(null);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
+  const [docDriverId, setDocDriverId] = useState(null);
 
   async function load() {
     setLoading(true);
@@ -252,6 +261,14 @@ export default function DriversPage() {
                             Edit
                           </button>
                           <button
+                            onClick={() => setDocDriverId(docDriverId === d.id ? null : d.id)}
+                            className="mr-3 text-gray-600 hover:underline focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-1 rounded"
+                            aria-label={`${docDriverId === d.id ? 'Hide' : 'Show'} documents for driver ${d.name}`}
+                            aria-expanded={docDriverId === d.id}
+                          >
+                            {docDriverId === d.id ? 'Hide Docs' : 'Documents'}
+                          </button>
+                          <button
                             onClick={() => handleDelete(d.id)}
                             className="text-red-600 hover:underline focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1 rounded"
                             aria-label={`Delete driver ${d.name}`}
@@ -266,6 +283,28 @@ export default function DriversPage() {
               </div>
             )}
           </SectionCard>
+
+          {/* Documents section — shown when a driver row's Documents button is active */}
+          {docDriverId && (() => {
+            const driver = drivers.find((d) => d.id === docDriverId);
+            return (
+              <SectionCard
+                title={`Documents — ${driver?.name ?? docDriverId}`}
+                className="mt-6"
+              >
+                <div className="grid gap-4 sm:grid-cols-2">
+                  {DRIVER_DOC_TYPES.map(({ docType, label }) => (
+                    <DocumentPanel
+                      key={docType}
+                      label={label}
+                      docType={docType}
+                      entityPath={`drivers/${docDriverId}`}
+                    />
+                  ))}
+                </div>
+              </SectionCard>
+            );
+          })()}
         </main>
       </div>
     </ProtectedRoute>
