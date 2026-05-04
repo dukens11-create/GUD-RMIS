@@ -166,23 +166,33 @@ In production, fetch the active load's waypoints from Firestore and pass them in
 3. Add all `NEXT_PUBLIC_FIREBASE_*` environment variables in the Netlify dashboard.
 4. Install the [Next.js Netlify plugin](https://docs.netlify.com/integrations/frameworks/next-js/overview/).
 
-### Render
+### Render (Static Site)
 
 1. Push your branch to GitHub.
 2. In the [Render dashboard](https://dashboard.render.com), create a new **Static Site** and connect your repository.
 3. Use the following settings:
    - **Build Command:** `npm install; npm run build`
    - **Publish Directory:** `dist`
-4. Add all `NEXT_PUBLIC_FIREBASE_*` environment variables in the Render dashboard under **Environment**.
+4. Add **all** `NEXT_PUBLIC_FIREBASE_*` environment variables in the Render dashboard under **Environment** → **Environment Variables** **before your first deploy** (see table below). These values are embedded into the JavaScript bundle at build time, so a new deploy is required whenever they change.
 5. Click **Deploy**.
 
-> **Limitations:** This project uses `output: 'export'` in `next.config.js` to generate a fully static site. This means:
-> - **Server-side rendering (SSR) is disabled** — all pages are pre-rendered at build time as static HTML.
-> - **API routes are disabled** — the `/api/*` endpoints will not function in the deployed static site. All data fetching must be done client-side via the Firebase SDK directly from the browser.
-> - **Client-side routing** — the root `/` page uses a JavaScript redirect to `/dashboard`. Make sure all `NEXT_PUBLIC_FIREBASE_*` environment variables are set in the Render dashboard so that Firebase initialises correctly on page load.
->
+| Variable | Example value |
+|---|---|
+| `NEXT_PUBLIC_FIREBASE_API_KEY` | `AIzaSy…` |
+| `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN` | `your-project.firebaseapp.com` |
+| `NEXT_PUBLIC_FIREBASE_PROJECT_ID` | `your-project-id` |
+| `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET` | `your-project.appspot.com` |
+| `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID` | `000000000000` |
+| `NEXT_PUBLIC_FIREBASE_APP_ID` | `1:000000000000:web:…` |
+
+> **Static-export limitations** (`output: 'export'` in `next.config.js`):
+> - **API routes are not supported.** The `/api/*` endpoints are compiled but not exported to `dist/` and will not run on Render Static Site. All data operations use the Firebase client SDK directly from the browser — no Next.js API route calls are made by the frontend.
+> - **SSR / middleware / cookies are disabled.** All pages are pre-rendered to static HTML at build time.
+> - **`NEXT_PUBLIC_*` vars are build-time constants.** Unlike a Node server, static hosting has no runtime environment. Every `NEXT_PUBLIC_*` value must be present in Render's Environment tab *before* the build runs so it is embedded in the bundle. If any variable is missing the app will show a "Configuration Error" banner instead of crashing.
+
 > **Troubleshooting: "Application error: a client-side exception has occurred"**
-> This error is caused by using the server-side `redirect()` helper from `next/navigation` in a static export — it generates HTML with `id="__next_error__"` which triggers the error overlay. The fix is to use a client-side `useRouter().replace()` redirect instead (already applied to `app/page.js`).
+>
+> This generic error overlay appears when an unhandled JavaScript exception escapes all React error boundaries. The most common cause for this deployment is **missing `NEXT_PUBLIC_FIREBASE_*` environment variables**. Verify that every variable in the table above is set in Render **Environment → Environment Variables**, then click **Manual Deploy → Deploy latest commit** to trigger a fresh build with the new values. The app will show a "Configuration Error" banner (not a crash) when variables are absent.
 
 ### Docker
 
